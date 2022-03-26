@@ -16,7 +16,9 @@ using TodoApi.Database;
 
 namespace TodoApi
 {
-    public class Startup
+	using TodoApiDTO.Services;
+
+	public class Startup
     {
         public Startup(IConfiguration configuration)
         {
@@ -37,6 +39,7 @@ namespace TodoApi
             });
 
             services.AddScoped<ITodoRepository, TodoRepository>();
+            services.AddScoped<ITodoService, TodoService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -46,6 +49,8 @@ namespace TodoApi
             {
                 app.UseDeveloperExceptionPage();
             }
+
+            app.UseMiddleware<ExceptionMiddleware>(env.IsDevelopment());
 
             app.UseHttpsRedirection();
 

@@ -1,10 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using TodoApi.Models;
-using TodoApi.Database;
+using TodoApiDTO.Services;
 
 namespace TodoApi.Controllers
 {
@@ -12,102 +9,44 @@ namespace TodoApi.Controllers
     [ApiController]
     public class TodoItemsController : ControllerBase
     {
-        private readonly ITodoRepository _repository;
+        private readonly ITodoService _service;
 
-        public TodoItemsController(ITodoRepository repository)
+        public TodoItemsController(ITodoService service)
         {
-            _repository = repository;
+            _service = service;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<TodoItemDTO>>> GetTodoItems()
+        public Task<IEnumerable<TodoItemDTO>> GetTodoItems()
         {
-            var items = await _repository.GetAll();
-            return items.Select(ItemToDTO).ToArray();
+            return _service.GetTodoItems();
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<TodoItemDTO>> GetTodoItem(long id)
+        public Task<TodoItemDTO> GetTodoItem(long id)
         {
-            var todoItem = await _repository.FindById(id);
-
-            if (todoItem == null)
-            {
-                return NotFound();
-            }
-
-            return ItemToDTO(todoItem);
+            return _service.GetTodoItem(id);
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTodoItem(long id, TodoItemDTO todoItemDTO)
         {
-            if (id != todoItemDTO.Id)
-            {
-                return BadRequest();
-            }
-
-            var todoItem = await _repository.FindById(id);
-            if (todoItem == null)
-            {
-                return NotFound();
-            }
-
-            todoItem.Name = todoItemDTO.Name;
-            todoItem.IsComplete = todoItemDTO.IsComplete;
-
-            try
-            {
-                await _repository.Save();
-            }
-            catch (DbUpdateConcurrencyException) when (!_repository.IsExist(id))
-            {
-                return NotFound();
-            }
-
+            await _service.UpdateTodoItem(id, todoItemDTO);
             return NoContent();
         }
 
         [HttpPost]
         public async Task<ActionResult<TodoItemDTO>> CreateTodoItem(TodoItemDTO todoItemDTO)
         {
-            var todoItem = new TodoItem
-            {
-                IsComplete = todoItemDTO.IsComplete,
-                Name = todoItemDTO.Name
-            };
-
-            _repository.Add(todoItem);
-            await _repository.Save();
-
-            return CreatedAtAction(
-                nameof(GetTodoItem),
-                new { id = todoItem.Id },
-                ItemToDTO(todoItem));
+            var newItemDto = await _service.CreateTodoItem(todoItemDTO);
+            return CreatedAtAction(nameof(GetTodoItem), new { id = newItemDto.Id }, newItemDto);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTodoItem(long id)
         {
-            var todoItem = await _repository.FindById(id);
-
-            if (todoItem == null)
-            {
-                return NotFound();
-            }
-
-            _repository.Delete(todoItem);
-            await _repository.Save();
-
+            await _service.DeleteTodoItem(id);
             return NoContent();
         }
-
-        private static TodoItemDTO ItemToDTO(TodoItem todoItem) =>
-            new TodoItemDTO
-            {
-                Id = todoItem.Id,
-                Name = todoItem.Name,
-                IsComplete = todoItem.IsComplete
-            };       
     }
 }
