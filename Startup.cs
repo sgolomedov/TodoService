@@ -29,7 +29,7 @@ namespace TodoApi
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddDbContext<TodoContext>(opt =>
-               opt.UseInMemoryDatabase("TodoList"));
+               opt.UseSqlServer(Configuration.GetConnectionString("ToDo")));
             services.AddControllers();
             services.AddSwaggerGen(c =>
             {
@@ -62,6 +62,11 @@ namespace TodoApi
             {
                 c.SwaggerEndpoint("v1/swagger.json", "Todo API V1");
             });
+
+            using var serviceScope = 
+                app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope();
+            TodoContext context = serviceScope.ServiceProvider.GetRequiredService<TodoContext>();
+            context.Database.EnsureCreated();
         }
     }
 }
